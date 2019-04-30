@@ -66,8 +66,8 @@ ADD xlaravel.pool.conf /usr/local/etc/php-fpm.d/
 # Extensions required for Laravel
 RUN printf "deb http://archive.debian.org/debian/ jessie main\ndeb-src http://archive.debian.org/debian/ jessie main\ndeb http://security.debian.org jessie/updates main\ndeb-src http://security.debian.org jessie/updates main" > /etc/apt/sources.list
 
-RUN apt-get update
+RUN apt-get update -yqq
     
-RUN apt-get install git zip wget -y
+RUN apt-get install git zip wget supervisor -y
 
 RUN docker-php-ext-install pcntl zip mbstring
