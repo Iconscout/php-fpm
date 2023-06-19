@@ -2,10 +2,13 @@ name: Docker Image CI
 
 on:
   push:
-    branches: [ "master" ]
+    branches: [ "main" ]
 jobs:
   build-image:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     strategy:
       matrix:
         version: [ "7.2" ]
@@ -13,22 +16,22 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
-      - name: Set up Docker Buildx
-        id: buildx
-        uses: docker/setup-buildx-action@v2
+      - name: Set up Depot CLI
+        uses: depot/setup-action@v1
       - name: Login to DockerHub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.CI_REGISTRY_USER }}
           password: ${{ secrets.CI_REGISTRY_PASSWORD }}
-      - name: Build And Push
-        run: |-
-          docker buildx build \
-            --build-arg PHP_VERSION=${{ matrix.version }} \
-            --build-arg SERVER_TYPE=${{ matrix.server_type }} \
-            --platform linux/amd64,linux/arm64 \
-            --output "type=image,push=true" \
-            --tag ${{ secrets.CI_REGISTRY_IMAGE }}:${{ matrix.version }}-${{ matrix.server_type }} \
-            --file ./Dockerfile ./
+      - name: Build and push
+        uses: depot/build-push-action@v1
+        with:
+          # if no depot.json file is at the root of your repo, you must specify the project id
+          project: r747wkbsnh
+          token: depot_project_7a6d4da9068ceba0d8b8d9d8acd8287042a9f4c8827485e8e5094b5452b9569f
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ secrets.CI_REGISTRY_IMAGE }}:${{ matrix.version }}-${{ matrix.server_type }}
+          build-args: |
+            PHP_VERSION=${{ matrix.version }}
+            SERVER_TYPE=${{ matrix.server_type }}
