@@ -1,73 +1,31 @@
-#
-#--------------------------------------------------------------------------
-# Image Setup
-#--------------------------------------------------------------------------
-#
-# To edit the 'php-fpm' base Image, visit its repository on Github
-#    https://github.com/Laradock/php-fpm
-#
-# To change its version, see the available Tags on the Docker Hub:
-#    https://hub.docker.com/r/laradock/php-fpm/tags/
-#
-# Note: Base Image name format {image-tag}-{php-version}
-#
+ARG PHP_VERSION=7.2
+ARG SERVER_TYPE=fpm-alpine
 
-FROM laradock/php-fpm:2.0-71
+FROM php:${PHP_VERSION}-${SERVER_TYPE}
 
-MAINTAINER Mahmoud Zalt <mahmoud@zalt.me>
+# INSTALL SOME SYSTEM PACKAGES.
+RUN apk --update --no-cache add ca-certificates \
+    curl \
+    wget \
+    # Required for Healthcheck
+    fcgi \
+    bash
 
-#
-#--------------------------------------------------------------------------
-# Mandatory Software's Installation
-#--------------------------------------------------------------------------
-#
-# Mandatory Software's such as ("mcrypt", "pdo_mysql", "libssl-dev", ....)
-# are installed on the base image 'laradock/php-fpm' image. If you want
-# to add more Software's or remove existing one, you need to edit the
-# base image (https://github.com/Laradock/php-fpm).
-#
+# INSTALL COMPOSER.
+COPY --from=composer /usr/bin/composer /usr/bin/composer
 
-#
-#--------------------------------------------------------------------------
-# Optional Software's Installation
-#--------------------------------------------------------------------------
-#
-# Optional Software's will only be installed if you set them to `true`
-# in the `docker-compose.yml` before the build.
-# Example:
-#   - INSTALL_ZIP_ARCHIVE=true
-#
+# Install php-extension-installer.
+COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/local/bin/
 
-#####################################
-# Exif:
-#####################################
+RUN IPE_GD_WITHOUTAVIF=1 install-php-extensions \
+    pdo_mysql \
+    exif \
+    pcntl \
+    opcache \
+    grpc \
+    # Required for PHP Excel
+    gd \
+    zip
 
-# Enable Exif PHP extentions requirements
-RUN docker-php-ext-install exif
-
-#####################################
-# Opcache:
-#####################################
-
-RUN docker-php-ext-install opcache
-
-# Copy opcache configration
-COPY opcache.ini /usr/local/etc/php/conf.d/opcache.ini
-
-#
-#--------------------------------------------------------------------------
-# Final Touch
-#--------------------------------------------------------------------------
-#
-ADD php71.ini /usr/local/etc/php/php.ini
-ADD laravel.ini /usr/local/etc/php/conf.d
-ADD xlaravel.pool.conf /usr/local/etc/php-fpm.d/
-
-# Extensions required for Laravel
-RUN printf "deb http://archive.debian.org/debian/ jessie main\ndeb-src http://archive.debian.org/debian/ jessie main\ndeb http://security.debian.org jessie/updates main\ndeb-src http://security.debian.org jessie/updates main" > /etc/apt/sources.list
-
-RUN apt-get update -yqq
-    
-RUN apt-get install git zip wget supervisor -y
-
-RUN docker-php-ext-install pcntl zip mbstring
+# EXPOSE PORTS!
+EXPOSE 9000
